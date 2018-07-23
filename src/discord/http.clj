@@ -26,32 +26,39 @@
 
 (defn build-server [server-map]
   (map->Server
-    {:id          (:id server-map)
-     :name        (:name server-map)
-     :owner?      (:owner server-map)
-     :icon        (:icon server-map)
-     :permissions (:permissions server-map)
-     :region      (get types/server-region (:region server-map))}))
+   {:id          (:id server-map)
+    :name        (:name server-map)
+    :owner?      (:owner server-map)
+    :icon        (:icon server-map)
+    :permissions (:permissions server-map)
+    :region      (get types/server-region (:region server-map))}))
 
-(defrecord User [id username mention bot? mfa-enabled? verified? roles deaf mute avatar joined
-                 discriminator])
+(defn build-server-list [server-maps]
+  (mapv build-server server-maps))
+
+(defrecord User [id username nick mention bot? mfa-enabled? verified? roles deaf mute avatar
+                 joined discriminator])
 
 (defn build-user [user-map]
   (let [user-id (-> user-map :user :id)
         mention (str \@ user-id)]
     (map->User
-    {:id            user-id
-     :mention       mention
-     :deaf          (:deaf user-map)
-     :mute          (:mute user-map)
-     :roles         (:roles user-map)
-     :joined        (:joined_at user-map)
-     :bot?          (-> user-map :user :bot)
-     :mfa-enabled?  (-> user-map :user :mfa_enabled)
-     :verified?     (-> user-map :user :verified)
-     :username      (-> user-map :user :username)
-     :avatar        (-> user-map :user :avatar)
-     :discriminator (-> user-map :user :discriminator)})))
+     {:id            user-id
+      :mention       mention
+      :deaf          (:deaf user-map)
+      :mute          (:mute user-map)
+      :roles         (:roles user-map)
+      :joined        (:joined_at user-map)
+      :bot?          (-> user-map :user :bot)
+      :mfa-enabled?  (-> user-map :user :mfa_enabled)
+      :verified?     (-> user-map :user :verified)
+      :username      (-> user-map :user :username)
+      :nick          (-> user-map :nick)
+      :avatar        (-> user-map :user :avatar)
+      :discriminator (-> user-map :user :discriminator)})))
+
+(defn build-user-list [user-maps]
+  (mapv build-user user-maps))
 
 (defrecord Channel [id guild-id name type position topic])
 
@@ -63,12 +70,15 @@
 
 (defn build-channel [channel-map]
   (map->Channel
-    {:guild-id  (:guild_id channel-map)
-     :name      (:name channel-map)
-     :topic     (:topic channel-map)
-     :position  (:position channel-map)
-     :id        (:id channel-map)
-     :type      (get channel-type-map (:type channel-map))}))
+   {:guild-id  (:guild_id channel-map)
+    :name      (:name channel-map)
+    :topic     (:topic channel-map)
+    :position  (:position channel-map)
+    :id        (:id channel-map)
+    :type      (get channel-type-map (:type channel-map))}))
+
+(defn build-channel-list [channel-maps]
+  (mapv build-channel channel-maps))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -184,7 +194,7 @@
     ;; Based on the HTTP method of the request being performed, we'll be attaching either a JSON
     ;; body or URL query parameters to the request.
     (condp = method
-      :get      (assoc request :params params)
+      :get      (assoc request :query-params params)
       :post     (assoc request :body (json/write-str json) :content-type :json)
       :put      (assoc request :body (json/write-str json) :content-type :json)
       :patch    (assoc request :body (json/write-str json) :content-type :json)
@@ -301,7 +311,7 @@
   (discord-request :get-guild auth :guild guild :constructor build-server))
 
 (defn get-servers [auth]
-  (discord-request :get-servers auth :constructor build-server))
+  (discord-request :get-servers auth :constructor build-server-list))
 
 (defn find-server [auth server-name]
   (if-let [servers (get-servers auth)]
@@ -322,7 +332,7 @@
   (discord-request :get-guild-member auth :guild guild :user user :constructor build-user))
 
 (defn list-members [auth guild & {:keys [limit after] :as params}]
-  (discord-request :list-members auth :guild guild :params params :constructor build-user))
+  (discord-request :list-members auth :guild guild :params params :constructor build-user-list))
 
 (defn find-member [auth guild member-name]
   (let [members (list-members auth guild)]
@@ -366,7 +376,7 @@
   (build-channel (into {} (discord-request :get-channel auth :channel channel))))
 
 (defn get-guild-channels [auth guild]
-  (discord-request :get-guild-channels auth :guild guild :constructor build-channel))
+  (discord-request :get-guild-channels auth :guild guild :constructor build-channel-list))
 
 (defn get-voice-channels [auth guild]
   (let [channels (get-guild-channels auth guild)]
