@@ -208,15 +208,15 @@
     (send-message gateway heartbeat)))
 
 (defn send-resume [gateway]
-  (let [session-id  (:session-id gateway)
+  (let [session-id  @(:session-id gateway)
         seq-num     @(:seq-num gateway)]
     (send-message
-      gateway
-      (format-gateway-message
-        :resume
-        {:token           (types/token gateway)
-         :session_id      session-id
-         :seq             seq-num}))))
+     gateway
+     (format-gateway-message
+      :resume
+      {:token           (types/token gateway)
+       :session_id      session-id
+       :seq             seq-num}))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Establishing a connection to the Discord gateway and begin reading messages from it.
